@@ -1,5 +1,10 @@
 #!/usr/bin/env python3.6
 
+# uncomment to run on GPU
+import os
+#os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+#os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
 # importing necessary module
 import numpy as np
 import os
@@ -8,32 +13,31 @@ import copy
 
 from keras.models import Sequential, Model
 from keras.layers.core import Dense, Activation
-from keras.layers import LSTM, Input, Flatten, Embedding, Dropout, GRU
+from keras.layers import LSTM, Input, Flatten, Embedding, Dropout, CuDNNGRU
 from keras.layers.wrappers import TimeDistributed
-#from keras.optimizers import SGD, Adam, RMSprop
 from keras.layers.normalization import BatchNormalization
 from sklearn.preprocessing import label_binarize
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.preprocessing import sequence
 
-#from features import *
-#from helper import *
+from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import confusion_matrix
+from plot_confusion_matrix import *
 
 code_path = os.path.dirname(os.path.realpath(os.getcwd()))
 emotions_used = np.array(['ang', 'dis', 'fea', 'exc', 'sad', 'sur'])
 data_path = '/media/bagus/data01/dataset/IEMOCAP_full_release/'
 sessions = ['Session1', 'Session2', 'Session3', 'Session4', 'Session5']
-framerate = 16000
+
+np.random.seed(135)
 
 import pickle
-with open('/media/bagustris/bagus/dataset/IEMOCAP_full_release/data_collected_full.pickle', 'rb') as handle:
-    data2 = pickle.load(handle)
+with open('/media/bagus/data01/dataset/IEMOCAP_full_release/data_collected_full.pickle', 'rb') as handle:
+    data = pickle.load(handle)
 
-text = []
-
-for ses_mod in data2:
-    text.append(ses_mod['transcription'])
+text = [t['transcription'] for t in data if t['emotion'] in emotions_used]
+print(len(text))
 
 MAX_SEQUENCE_LENGTH = 500
 
@@ -51,7 +55,7 @@ EMBEDDING_DIM = 300
 word_index = tokenizer.word_index
 print('Found %s unique tokens' % len(word_index))
 
-file_loc = '/media/bagustris/atmaja/github/IEMOCAP-Emotion-Detection/data/glove.840B.300d.txt'
+file_loc = '/media/bagus/data01/github/IEMOCAP-Emotion-Detection/data/glove.840B.300d.txt'
 
 print (file_loc)
 
@@ -75,46 +79,44 @@ for word, i in word_index.items():
         
 print('G Null word embeddings: %d' % np.sum(np.sum(g_word_embedding_matrix, axis=1) == 0))
 
-Y=[]
-for ses_mod in data2:
-    Y.append(ses_mod['emotion'])
-    
+Y=[e['emotion'] for e in data if e['emotion'] in emotions_used]    
 Y = label_binarize(Y,emotions_used)
 
 Y.shape
 
 # starting deeplearning
 model = Sequential()
-#model.add(Embedding(2737, 128, input_length=MAX_SEQUENCE_LENGTH))
+#model.add(Embedding(nb_nb_words, EMBEEMBEDDING_DIM, input_length=MAX_SEQUENCE_LENGTH))
 model.add(Embedding(nb_words,
                     EMBEDDING_DIM,
                     weights = [g_word_embedding_matrix],
                     input_length = MAX_SEQUENCE_LENGTH,
                     trainable = True))
-
-# LSTM architecture
-model.add(GRU(512, return_sequences=True))
-#model.add(GRU(512, return_sequences=True))
-#model.add(LSTM(512, return_sequences=True))
-#model.add(LSTM(512, return_sequences=True))
-model.add(GRU(256, return_sequences=False))
+model.add(CuDNNGRU(512, return_sequences=True))
+model.add(CuDNNGRU(256, return_sequences=False))
 model.add(Dense(512))
 model.add(Activation('relu'))
 model.add(Dense(6))
 model.add(Activation('softmax'))
 
 model.compile(loss='categorical_crossentropy', 
-		optimizer='adam', 
-		metrics=['acc'])
-
-#model.compile()
+              optimizer='rmsprop', 
+              metrics=['acc'])
 model.summary()
 
-print("Model1 Built")
-
-hist = model.fit(x_train_text, Y, 
-                 batch_size=4, epochs=10, verbose=1, 
-                 validation_split=0.2)
+hist = model.fit(x_train_text[:2700], Y[:2700], 
+                 batch_size=32, epochs=20, validation_split=0.2, verbose=1)
                  
-acc1 = max(hist.history['val_acc'])
+loss, acc1 = model.evaluate(x_train_text[2700:], Y[2700:])
 print(acc1)
+
+y_pred = model.predict(x_train_text[2700:])
+y_pred = np.argmax(y_pred, axis=-1)
+y_true = np.argmax(Y[2700:], axis=-1)
+precision_recall_fscore_support(y_true, y_pred, average='weighted')
+
+# plot confusion matrix
+ax = plot_confusion_matrix(y_true, y_pred, classes=emotions_used, normalize=True,
+                      title='Normalized confusion matrix')
+
+#ax.figure.savefig('confmat_ie.pdf', bbox_inches="tight")
