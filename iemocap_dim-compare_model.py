@@ -62,7 +62,7 @@ with codecs.open(file_loc, encoding='utf-8') as f:
 f.close()
 print('G Word embeddings:', len(gembeddings_index))
 
-nb_words = len(word_index) + 1
+nb_words = len(word_index) +1
 g_word_embedding_matrix = np.zeros((nb_words, EMBEDDING_DIM))
 for word, i in word_index.items():
     gembedding_vector = gembeddings_index.get(word)

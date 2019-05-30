@@ -32,17 +32,32 @@ from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import confusion_matrix
 from plot_confusion_matrix import *
 
-code_path = os.path.dirname(os.path.realpath(os.getcwd()))
-emotions_used = np.array(['ang', 'dis', 'fea', 'exc', 'sad', 'sur'])
+np.random.seed(135)
+                     
+# path data
 data_path = '/media/bagus/data01/dataset/IEMOCAP_full_release/'
 sessions = ['Session1', 'Session2', 'Session3', 'Session4', 'Session5']
 
-np.random.seed(135)
+# load glove embedding
+#file_loc = '/media/bagus/data01/github/IEMOCAP-Emotion-Detection/data/glove.840B.300d.txt'
+file_loc = '/media/bagus/data01/dataset/fasttext/crawl-300d-2M-subword/crawl-300d-2M-subword.vec'
+print (file_loc)
 
 import pickle
 with open('/media/bagus/data01/dataset/IEMOCAP_full_release/data_collected_full.pickle', 'rb') as handle:
     data = pickle.load(handle)
 
+# start experimenting here to observe size of data
+# list of emotion used, uncomment to choose
+#emotions_used = np.array(['hap','sad', 'sur']) # 'ang', 'dis', 'fea', 'exc', 
+#emotions_used = np.array(['hap','sad', 'sur', 'ang', 'fea', 'exc'])
+#emotions_used = np.array(['ang', 'exc', 'neu', 'sad', 'fru', 'hap', 'sur', 'dis', 'fea'])
+emotions_used = np.array(['ang', 'exc', 'neu', 'sad' ])
+
+# load emotion label
+Y = [e['emotion'] for e in data if e['emotion'] in emotions_used]    
+Y = label_binarize(Y, emotions_used)
+Y.shape     
 text = [t['transcription'] for t in data if t['emotion'] in emotions_used]
 print(len(text))
 
@@ -63,10 +78,6 @@ EMBEDDING_DIM = 300
 word_index = tokenizer.word_index
 print('Found %s unique tokens' % len(word_index))
 
-# choose between GloVe or FastText
-#file_loc = '/media/bagus/data01/github/IEMOCAP-Emotion-Detection/data/glove.840B.300d.txt'
-file_loc = '/media/bagus/data01/dataset/fasttext/crawl-300d-2M-subword/crawl-300d-2M-subword.vec'
-print (file_loc)
 
 gembeddings_index = {}
 with codecs.open(file_loc, encoding='utf-8') as f:
@@ -88,15 +99,8 @@ for word, i in word_index.items():
         
 print('G Null word embeddings: %d' % np.sum(np.sum(g_word_embedding_matrix, axis=1) == 0))
 
-# load emotion label
-Y=[e['emotion'] for e in data if e['emotion'] in emotions_used]    
-Y = label_binarize(Y, emotions_used)
-
-Y.shape
-
 # starting deeplearning
 model = Sequential()
-#model.add(Embedding(nb_words, EMBEDDING_DIM, input_length=MAX_SEQUENCE_LENGTH))
 model.add(Embedding(nb_words,
                     EMBEDDING_DIM,
                     weights = [g_word_embedding_matrix],
@@ -105,22 +109,19 @@ model.add(Embedding(nb_words,
 model.add(CuDNNGRU(512, return_sequences=True))
 model.add(CuDNNGRU(256, return_sequences=False))
 model.add(Dense(512, activation='relu'))
-model.add(Dense(6, activation='softmax'))
+model.add(Dense(len(emotions_used), activation='softmax'))
 
 model.compile(loss='categorical_crossentropy', 
               optimizer='rmsprop', 
               metrics=['acc'])
 model.summary()
 
-# uncomment to save model plot
-from keras.utils import plot_model
-plot_model(model, show_shapes=True, show_layer_names=False, to_file='model_gru.pdf')
-
-hist = model.fit(x_train_text[:2700], Y[:2700], 
-                 batch_size=32, epochs=30, validation_split=0.2, verbose=1)
+limit_train = round(0.8*len(Y))
+hist = model.fit(x_train_text[:limit_train], Y[:limit_train], 
+                 batch_size=32, epochs=30, validation_split=0.2, verbose=0)
                  
-loss, acc1 = model.evaluate(x_train_text[2700:], Y[2700:])
-print(max(hist.history['val_acc']), acc1)
+loss, acc = model.evaluate(x_train_text[limit_train:], Y[limit_train:])
+print(max(hist.history['acc']), max(hist.history['val_acc']),acc)
 
 y_pred = model.predict(x_train_text[2700:])
 y_pred = np.argmax(y_pred, axis=-1)

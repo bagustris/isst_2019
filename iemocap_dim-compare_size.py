@@ -62,7 +62,7 @@ with codecs.open(file_loc, encoding='utf-8') as f:
 f.close()
 print('G Word embeddings:', len(gembeddings_index))
 
-nb_words = len(word_index) + 1
+nb_words = len(word_index) +1
 g_word_embedding_matrix = np.zeros((nb_words, EMBEDDING_DIM))
 for word, i in word_index.items():
     gembedding_vector = gembeddings_index.get(word)
@@ -91,11 +91,11 @@ def emotion_model():
     return model
 
 model = emotion_model()
-hist = model.fit(x_train_text[:8000], vad[:8000], epochs = 30, batch_size = 32, verbose=1, validation_split=0.2)
+hist = model.fit(x_train_text[:4800], vad[:4800], epochs=30, batch_size=32, verbose=1, validation_split=0.2)
 print(min(hist.history['val_mean_absolute_percentage_error']))
 
 # evaluation 
-eval_metrik = model.evaluate(x_train_text[8000:], vad[8000:])
+eval_metrik = model.evaluate(x_train_text[4800:6000], vad[4800:6000])
 print(eval_metrik)
 
 # uncomment to print prediction

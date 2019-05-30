@@ -117,7 +117,7 @@ data = np.vstack((x_train_text, x_test_text))
 target = np.vstack((Y, Yt))
 
 rmsprop = RMSprop(lr=0.000001, decay=0.01)
-sgd=SGD(lr=0.000001)0
+sgd=SGD(lr=0.000001)
 
 # starting deeplearning: RNN architecture, varying: Bidirectional, Attention, weighting
 model = Sequential()
@@ -135,7 +135,7 @@ model.add(Dropout(0.5))
 model.add(Dense(6, activation='softmax'))
 
 model.compile(loss='categorical_crossentropy',
-              optimizer=rmsprop, 
+              optimizer='rmsprop', 
               metrics=['acc'])
 
 #model.compile()

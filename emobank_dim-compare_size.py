@@ -83,12 +83,13 @@ def build_model():
 model = build_model()
 model.summary()
 
-hist = model.fit(x_train_text[:8000], vad[:8000], epochs=30, batch_size=32, verbose=1, validation_split=0.2)
-min_hist = hist.history['val_mean_absolute_percentage_error']
-print(min(min_hist))
+hist = model.fit(x_train_text[:6400], vad[:6400], epochs=30, batch_size=32, verbose=1, validation_split=0.2)
 
-loss, eval_metrik = model.evaluate(x_train_text[8000:], vad[8000:])
-print(loss, eval_metrik)
+# evaluation 
+eval_metrik = model.evaluate(x_train_text[6400:8000], vad[6400:8000])
+print(eval_metrik)
+print([min(hist.history['val_loss']), min(hist.history['val_mean_absolute_percentage_error'])])
+print([min(hist.history['loss']), min(hist.history['mean_absolute_percentage_error'])])
 
 # predict
 y_predict = model.predict(x_train_text[8000:], batch_size=None, verbose=0, steps=None)

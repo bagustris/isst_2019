@@ -20,11 +20,14 @@ from sklearn.preprocessing import label_binarize
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing import sequence
 from keras.utils import to_categorical
+from keras.wrappers.scikit_learn import KerasClassifier
 
 import numpy as np
 
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import GridSearchCV
+
 from plot_confusion_matrix import *
 
 np.random.seed(3)
@@ -81,48 +84,39 @@ for word, i in word_index.items():
 print('G Null word embeddings: %d' % np.sum(np.sum(g_word_embedding_matrix, axis=1) == 0))
 
 # starting deeplearning: RNN architecture, varying: Bidirectional, Attention, weighting
-model = Sequential()
-model.add(Embedding(nb_words,
+def build_model(gru_unit=32, do_rate=0.2, dense_unit=0):
+    model = Sequential()
+    model.add(Embedding(nb_words,
                     EMBEDDING_DIM,
                     weights = [g_word_embedding_matrix],
                     input_length = MAX_SEQUENCE_LENGTH,
                     trainable = True))
-model.add(CuDNNGRU(512, return_sequences=True))
-model.add(CuDNNGRU(256, return_sequences=False))
-model.add(Dropout(0.5))
-model.add(Dense(512, activation='relu'))
-model.add(Dropout(0.3))
-model.add(Dense(7, activation='softmax'))
+    model.add(CuDNNGRU(gru_unit, return_sequences=True))
+    model.add(CuDNNGRU(gru_unit, return_sequences=False))
+    model.add(Dropout(do_rate))
+    model.add(Dense(dense_unit, activation='relu'))
+    model.add(Dense(7, activation='softmax'))
 
-model.compile(loss='categorical_crossentropy', 
+    model.compile(loss='categorical_crossentropy', 
               optimizer='rmsprop', 
               metrics=['acc'])
-model.summary()
+    return model
 
-hist = model.fit(x_train_text[:6130], Y[:6130], batch_size=32, epochs=30,  validation_split=0.2, shuffle=True, verbose=1) #
+#model.summary()
 
-loss, acc1 = model.evaluate(x_train_text[6130:],Y[6130:])
-print(acc1)
+# define parameter to search here
+batch_sizes = [16, 32, 128]
+#gru_units = [16, 64, 256]
+#dense_units = [0, 16, 32]
+#do_rates = [0.2, 0.4, 0.6]
 
-y_pred = model.predict(x_train_text[6130:])
-y_pred = np.argmax(y_pred, axis=-1)
-y_true = np.argmax(Y[6130:], axis=-1)
-precision_recall_fscore_support(y_true, y_pred, average='weighted')
+param_grids = dict(batch_size=batch_sizes)#, gru_unit=gru_units, 
+                    #dense_unit=dense_units, do_rate=do_rates)
 
-# plot confusion matrix
-emotions_used = np.array(['joy', 'fear', 'anger', 'sadness', 'disgust', 'shame', 'guilt'])
-ax = plot_confusion_matrix(y_true, y_pred, classes=emotions_used, normalize=True,
-                      title='Normalized confusion matrix')
+model = KerasClassifier(build_fn=build_model, epochs=30, verbose=0)
+grid = GridSearchCV(estimator=model, param_grid=param_grids, n_jobs=-1)
+result = grid.fit(x_train_text[:6130], Y[:6130])
 
-ax.figure.savefig('confmat_isear2.pdf', bbox_inches="tight")
+print("Best: {} using {}".format(result.best_score_, result.best_params_))
 
-plt.subplot(121)
-plt.plot(hist.history['loss'], label='loss')
-plt.plot(hist.history['val_loss'], label='val_loss')
-plt.legend(loc='best', fontsize=10)
 
-plt.plot(hist.history['acc'], label='acc')
-plt.plot(hist.history['val_acc'], label='val_acc')
-plt.legend(loc='best', fontsize=10)
-
-plt.savefig('acc_isear.pdf', bbox_inches='tight')
