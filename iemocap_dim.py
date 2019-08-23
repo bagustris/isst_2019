@@ -31,7 +31,8 @@ vad = vad.T
 print(vad.shape)
 
 # Word embedding calculation
-MAX_SEQUENCE_LENGTH = 50
+# MAX_SEQUENCE_LENGTH = 50
+MAX_SEQUENCE_LENGTH = len(max(text, key=len))
 
 tokenizer = Tokenizer()
 tokenizer.fit_on_texts(text)

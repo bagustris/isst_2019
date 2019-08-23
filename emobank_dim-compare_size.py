@@ -83,25 +83,26 @@ def build_model():
 model = build_model()
 model.summary()
 
-hist = model.fit(x_train_text[:6400], vad[:6400], epochs=30, batch_size=32, verbose=1, validation_split=0.2)
+hist = model.fit(x_train_text[:9000], vad[:9000], epochs=30, batch_size=32, verbose=1, validation_split=0.2)
 
 # evaluation 
-eval_metrik = model.evaluate(x_train_text[6400:8000], vad[6400:8000])
+eval_metrik = model.evaluate(x_train_text[9000:], vad[9000:])
 print(eval_metrik)
-print([min(hist.history['val_loss']), min(hist.history['val_mean_absolute_percentage_error'])])
-print([min(hist.history['loss']), min(hist.history['mean_absolute_percentage_error'])])
 
-# predict
-y_predict = model.predict(x_train_text[8000:], batch_size=None, verbose=0, steps=None)
-y_predict
-print(vad[8000:])
+# print([min(hist.history['val_loss']), min(hist.history['val_mean_absolute_percentage_error'])])
+# print([min(hist.history['loss']), min(hist.history['mean_absolute_percentage_error'])])
 
-import matplotlib.pyplot as plt
-filename = os.path.basename("__file__")
-fig, ax = plt.subplots()
-ax.plot(hist.history['mean_absolute_percentage_error'], label='train mape')
-ax.plot(hist.history['val_mean_absolute_percentage_error'], label='val mape')
-ax.legend(loc='best', fontsize=10)
-ax.set_xlabel('epochs')
-ax.set_ylabel('MAPE(%)')
-ax.figure.savefig('err_{}.pdf'.format(filename), bbox_inches='tight')
+# # predict
+# y_predict = model.predict(x_train_text[8000:], batch_size=None, verbose=0, steps=None)
+# y_predict
+# print(vad[8000:])
+
+# import matplotlib.pyplot as plt
+# filename = os.path.basename("__file__")
+# fig, ax = plt.subplots()
+# ax.plot(hist.history['mean_absolute_percentage_error'], label='train mape')
+# ax.plot(hist.history['val_mean_absolute_percentage_error'], label='val mape')
+# ax.legend(loc='best', fontsize=10)
+# ax.set_xlabel('epochs')
+# ax.set_ylabel('MAPE(%)')
+# ax.figure.savefig('err_{}.pdf'.format(filename), bbox_inches='tight')
