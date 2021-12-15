@@ -1,5 +1,5 @@
 ## Repository for ISST 2019  
-Deep lerning based categorical and dimensional text emotion recognition  
+Deep learning-based categorical and dimensional text emotion recognition  
 
 Layers (for both regression and classification):  
 - Embedding
