@@ -13,5 +13,6 @@ Open each python file for details.
 If you use this code, please cite,
 ```
 B.T. Atmaja, Kiyoaki Shirai, Masato Akagi."Deep Learning-based Categorical and
-Dimensional Emotion Recognition for Written and Spoken Texts." Int. Seminar on Science and Techonlogy, Surabaya. (2019).
+Dimensional Emotion Recognition for Written and Spoken Texts." Int. Seminar 
+on Science and Technology, Surabaya. (2019).
 ```
